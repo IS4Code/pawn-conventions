@@ -101,7 +101,7 @@ A variadic function (with the `...` part) is encoded by specifying `x` after the
 Optionally, the signature can be followed by another `@` character and the encoded return type. If this part is not present, no assumptions about the returned value must be made. If only `@` is provided but no encoded type, the function does not return anything meaningful.
 
 ### Optcall
-Functions using the optcall calling convention take a special parameter that specifies the "default" value for missing arguments. The name of an optcall function must be followed by `@O` and optionally by the encoded signature of the base function (without the initial `@`). The special parameter is not represented in any way in the signature.
+Functions using the optcall calling convention take a special parameter that specifies the "default" value for missing arguments. The name of an optcall function must be followed by `@o` and optionally by the encoded signature of the base function (without the initial `@`). The special parameter is not represented in any way in the signature.
 
 ## Examples
 ```pawn
