@@ -65,7 +65,7 @@ Although Pawn does not support overloaded functions, other languages may profit 
 ### Standard calling convention
 A mangled name for a function using the standard Pawn calling convention is suffixed with `@` and the encoded signature. The encoded string can contain only characters that can appear in a valid Pawn symbol, i.e. `a-z`, `A-Z`, `0-9`, `_`, and `@`. If the function contains the `@` character in its unmangled name, the first occurence of the character that is followed by a valid signature is chosen.
 
-The signature starts with the number of fixed parameters, encoded as a non-negative decimal number (with no leading zeroes or non-digit characters). This number is used to verify that the signature is correct, based on the number of encoded parameters. If the function accepts no arguments, this must be `0`.
+The signature starts with the number of fixed parameters, encoded as a non-negative decimal number (with no leading zeroes or non-digit characters). This number is used to verify that the signature is correct, based on the number of encoded parameters. If the function accepts no arguments, this must be `0`. The encoded signature can end here (or be followed by `@`), in which case only the number of fixed arguments is known, but not their types.
 
 The number is followed by the fixed parameters, each encoded according to its type. The following table specifies how to encode the formal types of simple parameters:
 
@@ -82,19 +82,23 @@ The number is followed by the fixed parameters, each encoded according to its ty
 
 Parameters encoded in this way are always passed by value, with the exception of `s`. The length of the string (both packed or unpacked) must be determined by calling `amx_StrLen`, and the native function is prohibited from modifying the string. `c` corresponds to a valid cell in any string, or 0. `h` represents an opaque value whose integral value is irrelevant, and the only guarantee is that 0 is not a valid value. `_` permits an argument of any value type.
 
-Arrays are encoded as `a` or `A`. `A` denotes an input array, i.e. an array which cannot be modified by the native function (interning the value is safe). The array is followed by its length specified as a decimal number and the element type, encoded in the same fashion. `0` can be used to represent an unbounded array, in which case the length is determined in another way.
+Arrays are encoded as `a` or `A`. `A` denotes an input array, i.e. an array which cannot be modified by the native function (interning the value is safe). The array is followed by its length specified as a decimal number and the element type, encoded in the same fashion. `0` can be used to represent an unbounded array, in which case the length is determined in another way. The array specifier can be followed by `l` instead of the size, indicating that the array is followed immediately by its length. In case of a nested array, `l` can happen at any level, and the outermost length is represented as the first parameter following it. The length parameter should not be repeated again in the signature (so `al` corresponds to 2 parameters).
 
-References are encoded as `a1`, followed by the element type.
+References are encoded as `v`, followed by the element type.
 
 If the parameter accepts a value of a specific tag, `t` can be used to specify the tag. This is followed by the length of the tag name, followed by the tag name itself. It is possible to chain the tags in case of multiple permitted tags, but they must be sorted in the ascending order (based on the ASCII codes). Zero-length tag name represents an untagged cell. `t` must not be used if the only tag is `Float` or `bool`, or if the parameter is tagless.
 
-Finally, if the default value of a parameter is a `sizeof` or a `tagof` expression, it can be encoded by using `L` or `T`, respectively, followed by the index of the referenced parameter (zero-based). Additionally, `L` can be chained to represent dimensions, e.g. `L0` is `sizeof(arg0)`, `LL0` is `sizeof(arg0[])` etc.
+Enum parameters (for structures) are encode as `e` or `E` (the latter is read-only). This is followed by the number of fields in the enum, and then by their encoded types.
+
+If the default value of a parameter is a `sizeof` or a `tagof` expression, it can be encoded by using `L` or `T`, respectively, followed by the index of the referenced parameter (zero-based). Additionally, `L` can be chained to represent dimensions, e.g. `L0` is `sizeof(arg0)`, `LL0` is `sizeof(arg0[])` etc. If an array together with a parameter specifying its length can be encoded using `al`, using `L` is invalid.
+
+Finally, if a parameter (or return value) is an array, enum, or has a custom tag, and a same parameter with the same encoding was already specified before it, `p` must be used, followed by the index of the first parameter that has the same type as this one. If this occurs inside an enum, the index refers to a field of the enum and not a parameter. A reference parameter that has a custom tag that was already specified must also use `p` as the type of the reference.
 
 #### Variadic functions
-A variadic function (with the `...` part) is encoded by specifying `x` after the parameters. This can be followed by tags like the `t` specifier, or by nothing, in which case a value of any tag is allowed.
+A variadic function (with the `...` part) is encoded by specifying `x` after the parameters. This can be followed by tags like the `t` specifier, or by nothing, in which case a value of any tag is allowed. `x` does not contribute to the total number of arguments specified in the signature.
 
 #### Return value
-Optionally, the signature can be followed by another `@` character and the encoded return type. If this part is not present, no assumptions about the returned value must be made.
+Optionally, the signature can be followed by another `@` character and the encoded return type. If this part is not present, no assumptions about the returned value must be made. If only `@` is provided but no encoded type, the function does not return anything meaningful.
 
 ### Optcall
 Functions using the optcall calling convention take a special parameter that specifies the "default" value for missing arguments. The name of an optcall function must be followed by `@O` and optionally by the encoded signature of the base function (without the initial `@`). The special parameter is not represented in any way in the signature.
@@ -105,6 +109,8 @@ native SetTimer(const funcname[], interval, bool:repeating) = SetTimer@3sib@i;
 native SetTimerEx(const funcname[], interval, bool:repeating, const format[], {Float,_}:...) = SetTimerEx@4sibsx05Float@i;
 native Float:GetPVarFloat(playerid, const varname[]) = GetPVarFloat@2is@f;
 native File:fopen(const name[], filemode:mode=io_readwrite) = fopen@2st8filemode@t4File;
-native GetPlayerName(playerid, name[], len=sizeof(name)) = GetPlayerName@3ia0cL1@i;
-native bool:GetPlayerHealth(playerid, &Float:health) = GetPlayerHealth@2ia1f@b;
+native GetPlayerName(playerid, name[], len=sizeof(name)) = GetPlayerName@3ialc@i;
+native bool:GetPlayerHealth(playerid, &Float:health) = GetPlayerHealth@2ivf@b;
+native FillArray(arr[5][][], size2=sizeof(arr[]), size3=sizeof(arr[][])) = FillArray@3a5aiai@;
+native GetVehicleVectors(vehicleid, Float:front[3], Float:right[3], Float:top[3]) = GetVehicleVectors@4ia3fp1p1@;
 ```
