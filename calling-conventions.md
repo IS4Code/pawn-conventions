@@ -25,11 +25,13 @@ The contents of `params` may be modified by the function, but the fields of `amx
 ## Optional arguments calling convention (optcall)
 The optcall convention derives from AMX-call, intended to be used for languages that allow specifying a "missing" argument without having to provide the value from the declaration of the function.
 
-In this case, the first parameter (`params[1]`), denoted `nil`, is a special value that is guaranteed not to be present in any argument whose value is directly specified. Since the caller has full access to the arguments, it can choose a value for `nil` (preferably `cellmin`) that is distinct from any provided argument, and use this one to represent missing values.
+In this case, the first parameter (`params[1]`), denoted `nil`, is a special value that is guaranteed not to be present in any argument whose value is directly specified. Since the caller has full access to the arguments, it can choose a value for `nil` (preferably `cellmin`) that is distinct from any provided argument, and use this one to represent missing values. `nil` is not a fixed value.
 
 `params[0]` still contains the total number of bytes provided to the function, counting the `nil` parameter. The number may be less than the total number of parameters, in which case the rest is filled with their default values as if they were `nil`.
 
-Similarly to Pawn-call, the function is allowed to modify the contents of `params`, but only the arguments that were originally `nil`, and not the actual `nil` parameter.
+`nil` is in effect only for the elements inside `params`. Elements in variables or arrays provided to the function indirectly (via an address) are not considered. Reference parameters contain the `nil` value directly, if they are unspecified.
+
+Similarly to Pawn-call, the function is allowed to modify the contents of `params`, but only the arguments that were originally `nil` (and not the actual `nil` parameter). This guarantees that a value the caller may rely upon is never modified.
 
 Since Pawn doesn't directly support this calling convention, a Pawn-like language is used as an example, together with a standard Pawn fallback:
 ```pawn
